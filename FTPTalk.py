@@ -24,6 +24,7 @@ port = 'Your FTP port number'
 encryptKey = b'Fernet encryption key'
 mailID = 'Your Email to send codes for new people'
 mailPW = 'Your Email password'
+smtpServer = 'smtp.XXXX.com'
 ==========================================
 '''
 
@@ -953,7 +954,7 @@ def mailCertify(event=None):
     print(randomCode)
     id = important.mailID
     passwd = important.mailPW
-    mail_server = smtplib.SMTP('smtp.naver.com', 587)
+    mail_server = smtplib.SMTP(important.smtpServer, 587)
     mail_server.ehlo()
     mail_server.starttls()
     mail_server.login(id, passwd)
