@@ -15,7 +15,7 @@ import os
 # important.py: including ftp address, ID, PW, Port, Encryption Key, Email, Email_Password
 import important
 
-'''
+"""
 ==============important.py===============
 url = 'Your FTP address'
 id = 'Your FTP ID'
@@ -26,7 +26,7 @@ mailID = 'Your Email to send codes for new people'
 mailPW = 'Your Email password'
 smtpServer = 'smtp.XXXX.com'
 ==========================================
-'''
+"""
 
 url = important.url
 id = important.id
@@ -67,6 +67,8 @@ findingFriends = False
 threadRunning = False
 accessing = False
 firstDir = ''
+messageSent = False
+sentMessage = ''
 
 
 class SimpleEnDecrypt:
@@ -144,28 +146,28 @@ def eraseAll():
 def download(direct, alert=None):
     global downFailTime, firstDir
     try:
-        # print(f'다운 받는 곳 {session.pwd()}, {direct}')
+        print(f'다운 받는 곳 {session.pwd()}, {direct}')
         firstDir = session.pwd()
         with open('local' + direct, 'wb') as f:
             session.retrbinary('RETR ' + direct, f.write)
-            # print('down ok')
+            print('down ok')
     except:
         if alert is False:
             return False
         downFailTime += 1
-        # print(downFailTime)
+        print(downFailTime)
 
-        # print('in def download: Download Failed')
+        print('in def download: Download Failed')
     if downFailTime > 10:
         if alert is False:
             return
         reconnect(firstDir)
         downFailTime = 0
-        # print('reconnecting')
+        print('reconnecting')
 
 
 def read(fileName):
-    global messageNum, newMessageCame, unreadMessages, unread, lastMessageNum, \
+    global messageNum, newMessageCame, unreadMessages, unread, lastMessageNum, messageSent,sentMessage, \
         nextUnreadMessages, chattingRoomStart, writingMessageNum, changeDetect, Name, chatting, beforeLastMessageNum, successRead
     messageNum = 0  # 이거 있어야만 다른 방 들어갈 때 메세지 수 안섞임
     with open('local' + fileName, 'r', encoding='cp949') as f:
@@ -173,9 +175,9 @@ def read(fileName):
         if readMessage:
             successRead = True
         else:
-            # print('Noting ro read\n')
+            print('Noting ro read\n')
             if not chattingRoomStart:
-                # print("Read Fail!!\n")
+                print("Read Fail!!\n")
                 pass
             successRead = False
             return
@@ -246,19 +248,30 @@ def read(fileName):
                     blank = ''
                     for i in range(len(f'{Time}] : ') + (len(f'{Name}') + 1) * 2):
                         blank += ' '
-
                     for i in range(repeatTime):
                         if i == 0:
                             readingText = f'[{Time}] {Name}: {Message[startLength:maxLength]}'
                         else:
                             readingText = f'{blank}{Message[startLength:maxLength]}'
-                        # print(f'{Message}  {Message[startLength:maxLength]}')
+                        print(f'{Message}  {Message[startLength:maxLength]}')
+
                         startLength += plusLength
                         maxLength += plusLength
                         append(readingText)
             beforeLastMessageNum = lastMessageNum
             changeDetect = nextUnreadMessages
         chattingRoomStart = False
+
+        if messageSent:
+            print(sentMessage, newCheck)
+            if sentMessage != newCheck:
+                print("충돌로 인해 재전송")
+                print(f'내가 보낸 메시지: {sentMessage}')
+                print(f'상대가 보낸 메시지: {newCheck}')
+
+                Write(chattingFileLocation, Message=sentMessage)
+                sentMessage = ''
+            messageSent = False
 
 
 def writeDate():
@@ -279,16 +292,20 @@ def eraseLocal(direct):
         f.close()
 
 
-def Write(fileName):
-    global lastMessageNum, messageNum, unread
+def Write(fileName, Message=None):
+    global lastMessageNum, messageNum, unread, sentMessage, messageSent
     with open('local' + fileName, 'a', encoding='cp949') as f:
         message = ent.get()
+        if Message:
+            message = Message
         if message:
             lastMessageNum = messageNum + 1
             ent.delete(0, END)
             sentence = f'[{lastMessageNum}] Date:{writeDate()} Time:{writeTime()} Name: {infoName} Message: {str(message)}'
+            sentMessage = sentence
             sentence = simpleED.encrypt(sentence)  # 암호화
             f.write(sentence + '\n')
+            messageSent = True
 
 
 def upload(fileName):
@@ -322,7 +339,7 @@ def sendThread(event=None):
             retry = 0
             return
         if accessing and retry < 50 and ent.get() != '':
-            # print(f"retry {retry}")
+            print(f"retry {retry}")
             retry += 1
             Window.after(10, sendThread)
         else:
@@ -357,7 +374,7 @@ def downAndRead():
     global accessing
     download(chattingFileLocation)
     read(chattingFileLocation)
-    # print('chatting')
+    print('chatting')
     Window.after(delayTime, accessingFalse)
 
 
@@ -366,7 +383,7 @@ def chattingLoop():
     if location == 'Chatting':
         if accessing is False:
             accessing = True
-            # print(f'채팅루프 {chattingFileLocation}')
+            print(f'채팅루프 {chattingFileLocation}')
             threading.Thread(target=downAndRead).start()
         Window.after(delayTime, chattingLoop)
 
@@ -382,12 +399,16 @@ location = ''
 Window = Tk()
 Window.title('FTP Talk')
 Window.geometry("380x563+800+300")
-Window.config()
 # Window.wm_attributes('-transparentcolor', rgb_hack((150, 150, 150)))
-Window.resizable(True, True)
+Window.resizable(False, False)
 # Window.overrideredirect(1)
 font = tkinter.font.Font(family="맑은 고딕", size=10)
 noticeFont = tkinter.font.Font(family="Arial", size=15, weight='bold')
+
+Window.iconbitmap("2.ico")
+# Window.iconphoto("2.ico")
+
+
 LogIn_frame = Frame(Window)
 ChattingRoom_frame = Frame(Window)
 Register_frame = Frame(Window)
@@ -399,7 +420,7 @@ def goChatting(event=None):
     location = 'Chatting'
     Window.after(shortDelayTime, chattingLoop)
     Window.title(f'Chat with: {currentChattingFriend}')
-    # print('chatting')
+    print('chatting')
     chattingRoomStart = True
     LogIn_frame.destroy()
     Main_frame.destroy()
@@ -426,11 +447,10 @@ def goChatting(event=None):
 
 def chattingToMain(event=None):
     currentDir = session.pwd()
-    # print(f'message num in current chatting {messageNum}')
+    print(f'message num in current chatting {messageNum}')
     modifyFriendList(currentChattingFriend, lastMessageNum)
     session.cwd(currentDir)
     goMain()
-    # localNumOfMessageCame()
 
 
 def refreshChatting(event=None):
@@ -460,9 +480,10 @@ def goLogin(event=None):
     findingFriends = False
     accessing = False
     findingFriends = False
+
     session.cwd(rootFile)  # chat
     location = 'Login'
-    # print('Login')
+    print('Login')
     ChattingRoom_frame.destroy()
     Register_frame.destroy()
     Main_frame.destroy()
@@ -503,7 +524,7 @@ def goRegister(event=None):
     global Register_frame, location, Mail_entry, Name_entry, PW_entry, PWAgain_entry, notice_label, myAssortedName, Mail_label, Certify_entry
     session.cwd(rootFile)
     location = 'Register'
-    # print('in login')
+    print('in login')
     Window.title(f'Welcome')
     LogIn_frame.destroy()
     Register_frame = Frame(Window)
@@ -545,7 +566,7 @@ def goMain(event=None):
     session.cwd(rootFile)
     global location, Main_frame, friend_list, FriendFind_ent, FriendFind_label, findingFriends, refresh_button, threadRunning, addFriend_button, logout_button, FriendFind_button, join_button, Delete_button, Every_button
     location = 'Main'
-    # print('in main')
+    print('in main')
     Window.title(f'User: {infoName}')
     refresh()
     LogIn_frame.destroy()
@@ -653,17 +674,17 @@ def findFriend(event=None):
     eraseLocal(onlyNameFile)
     friendInfo = f'{friendName} {friendMail}'
     FriendFind_ent.delete(END)
-    # print("친구찾기 ")
+    print("친구찾기 ")
     session.cwd(f'{rootFile}/{logID}')
     download(friendsListFile)
     with open('local' + friendsListFile, 'r', encoding='cp949') as f:
         readMessage = f.readlines()
-        # print(f'readMessage: {readMessage}')
+        print(f'readMessage: {readMessage}')
         if readMessage:
             for friends in readMessage:
                 friends = friends.strip()
                 friends = simpleED.decrypt(friends)
-                # print(f'friend: {friends}, friendInfo: {friendInfo}')
+                print(f'friend: {friends}, friendInfo: {friendInfo}')
                 if friendInfo in friends:
                     FriendFind_label['text'] = 'Already exist'
                     return
@@ -685,7 +706,7 @@ def addFriendToMyFriendList(friendName, friendMail):
     session.cwd(f'{rootFile}/{logID}')
     download(friendsListFile)
     directlyModifyFile(friendsListFile, f'{friendName} {friendMail} [0]')
-    # print(f'내 친구리스트에 추가한 것 {friendName} {friendMail} {lastMessageNum}')
+    print(f'내 친구리스트에 추가한 것 {friendName} {friendMail} {lastMessageNum}')
     upload(friendsListFile)
     session.cwd(rootFile)
 
@@ -695,7 +716,7 @@ def addMyNameToFriendsFriendList(friendMail):
     session.cwd(f'{rootFile}/{friendMail}')
     download(friendsListFile)
     directlyModifyFile(friendsListFile, f'{myName} {logID} [0]')
-    # print(f'친구의 친구리스트에 추가한 것 {myName} {logID} 0')
+    print(f'친구의 친구리스트에 추가한 것 {myName} {logID} 0')
     upload(friendsListFile)
     session.cwd(rootFile)
 
@@ -731,13 +752,10 @@ def modifyFriendsFriendList(friendMail, currentNum, deleteAll=False):
             friendsList = f.readlines()
             allSentence = ''
             if friendsList:
-                # print("friendlist 있음")
+                print("friendlist 있음")
                 for friendInfo in friendsList:
                     friendInfo = simpleED.decrypt(friendInfo)
-                    # print(f'{friendName}============================')
-                    # print(f'{friendName} friendinfo: {friendInfo}')
                     if logID in friendInfo:
-                        # print(f'this {friendName} friendinfo: {friendInfo}')
                         AllRex = r'(.*) (.*) \[(.*)\]$'
                         RAll = re.compile(AllRex)
                         MAll = RAll.search(friendInfo)
@@ -754,7 +772,6 @@ def modifyFriendsFriendList(friendMail, currentNum, deleteAll=False):
                         allSentence += info + '\n'
                 with open('local' + friendsListFile, 'w', encoding='cp949') as wf:
                     wf.write(allSentence)
-            # print(f'{friendName}와의 대화 개수 업로드')
             upload(friendsListFile)
     session.cwd(curDir)
 
@@ -769,17 +786,15 @@ def modifyFriendList(friendMail, currentNum, deleteAll=False):
             friendsList = f.readlines()
             allSentence = ''
             if friendsList:
-                # print("friendlist 있음")
+                print("friendlist 있음")
                 for friendInfo in friendsList:
                     friendInfo = simpleED.decrypt(friendInfo)
-                    # print(f'{friendName}============================')
-                    # print(f'{friendName} friendinfo: {friendInfo}')
                     if f'{friendMail} ' in friendInfo:  # friendName 오른쪽에 빈칸 있어야 함
-                        # print(f'this {friendMail} friendinfo: {friendInfo}')
+                        print(f'this {friendMail} friendinfo: {friendInfo}')
                         AllRex = r'(.*) (.*) \[(.*)\]$'
                         RAll = re.compile(AllRex)
                         MAll = RAll.search(friendInfo)
-                        # print(f'friend info: {friendInfo}')
+                        print(f'friend info: {friendInfo}')
                         name = MAll.group(1)
                         mail = MAll.group(2)
                         if not currentNum:
@@ -792,7 +807,7 @@ def modifyFriendList(friendMail, currentNum, deleteAll=False):
                         allSentence += info + '\n'
                     with open('local' + friendsListFile, 'w', encoding='cp949') as wf:
                         wf.write(allSentence)
-            # print(f'{friendMail}와의 대화 개수 업로드{currentNum}')
+            print(f'{friendMail}와의 대화 개수 업로드{currentNum}')
             upload(friendsListFile)
     session.cwd(curDir)
 
@@ -807,7 +822,7 @@ def numOfMessageCame(event=None):
             i = 0
             for friendNameMail in friendsList:
                 friendNameMail = simpleED.decrypt(friendNameMail)
-                # print('친구이름메일' + friendNameMail)
+                print('친구이름메일' + friendNameMail)
                 AllRex = r'(.*) (.*) \[(.*)\]'
                 RAll = re.compile(AllRex)
                 MAll = RAll.search(friendNameMail)
@@ -818,7 +833,7 @@ def numOfMessageCame(event=None):
                 messageCame2 = messageLengthCheck(f'{rootFile}/{friendMail}', f'{logID}.txt') - int(lastChatNumber)
                 if messageCame1 >= messageCame2:
                     messageCame = messageCame1
-                    # print(f'{friendMail} 내 폴더에 상대와의 대화가 있음 {messageCame1}개')
+                    print(f'{friendMail} 내 폴더에 상대와의 대화가 있음 {messageCame1}개')
                 else:
                     messageCame = messageCame2
                     # print(f'{friendMail} 상대의 폴더에 나와의 대화가 있음 {messageCame2}개')
@@ -826,7 +841,7 @@ def numOfMessageCame(event=None):
                     lastChatNumber = 0
                     # print(f'{messageCame}')
                     messageCame = messageLengthCheck(f'{rootFile}/{logID}', f'{friendMail}.txt') - int(lastChatNumber)
-                # print(f'came: {messageCame} = LengthCheck: {messageLengthCheck(f"{rootFile}/{logID}", f"{friendMail}.txt") + messageLengthCheck(f"{rootFile}/{friendMail}", f"{logID}.txt")} - last:{lastChatNumber}")')
+                print(f'came: {messageCame} = LengthCheck: {messageLengthCheck(f"{rootFile}/{logID}", f"{friendMail}.txt") + messageLengthCheck(f"{rootFile}/{friendMail}", f"{logID}.txt")} - last:{lastChatNumber}")')
                 # print(i)
                 friend_list.delete(i)
                 appendMain(i, friendName, friendMail, f'[{messageCame}]')
@@ -857,7 +872,7 @@ def messageLengthCheck(directory, fileName):
                 eraseAll()
                 append('Initialized by problems in decryption in length checking')
         finalMessageNum = messageNum
-        # print(f'마지막으로 보낸 메시지 숫자:{finalMessageNum}')
+        print(f'마지막으로 보낸 메시지 숫자:{finalMessageNum}')
         return finalMessageNum
 
 
@@ -866,12 +881,12 @@ def directlyRead(fileName):
         readMessage = f.readlines()
         if readMessage:
             for newCheck in readMessage:
-                # print(newCheck)
+                print(newCheck)
                 newCheck = simpleED.decrypt(newCheck)
                 f.close()
                 return newCheck
         else:
-            # print('nothing read')
+            print('nothing read')
             pass
 
 
@@ -899,28 +914,28 @@ def joinOrMakeRoom(event=None):
     currentChattingFriend = friendName
     friendMail = MAll.group(2)
     lastChatNumber = MAll.group(3)
-    # print(f'/HDD1/chat/{friendMail}')
+    print(f'/HDD1/chat/{friendMail}')
     session.cwd(f'{rootFile}/{friendMail}')  # 친구의 폴더로 들어가서 먼저 확인
     if download(f'{logID}.txt', alert=False) is False:
         session.cwd(f'{rootFile}/{logID}')  # 내 폴더로 들어가서 확인
         if download(f'{friendMail}.txt', alert=False) is False:
-            # print(logID)
-            # print(f'{friendMail}.txt')
-            # print('상대방에게 채팅방이 없어 내 폴더에서 생성')
+            print(logID)
+            print(f'{friendMail}.txt')
+            print('상대방에게 채팅방이 없어 내 폴더에서 생성')
             session.cwd(f'{rootFile}/{logID}')
             directlyWrite(f'{friendMail}.txt', None)
             upload(f'{friendMail}.txt')
             chattingFileLocation = f'{friendMail}.txt'
-            # print(f'여기서 채팅방 생성 {rootFile}/{logID}')
+            print(f'여기서 채팅방 생성 {rootFile}/{logID}')
         else:
-            # print('나에게 방 존재')
-            # print(f'내 방으로 들어감 {rootFile}/{logID}')
+            print('나에게 방 존재')
+            print(f'내 방으로 들어감 {rootFile}/{logID}')
             chattingFileLocation = f'{friendMail}.txt'
     else:
-        # print('상대방에게 방 존재')
-        # print(f'상대방한테 들어감{rootFile}/{friendMail}')
+        print('상대방에게 방 존재')
+        print(f'상대방한테 들어감{rootFile}/{friendMail}')
         chattingFileLocation = f'{logID}.txt'
-    # print(f'{chattingFileLocation}')
+    print(f'{chattingFileLocation}')
     goChatting()
 
 
@@ -937,12 +952,12 @@ def submit(event=None):
     global certified
     if randomCode == Certify_entry.get():
         notice_label["text"] = 'Certified'
-        # print(Certify_entry.get())
+        print(Certify_entry.get())
         certified = True
     else:
         notice_label["text"] = 'Wrong Code!!'
-        # print(Certify_entry.get())
-        # print(randomCode)
+        print(Certify_entry.get())
+        print(randomCode)
 
 
 def mailCertify(event=None):
@@ -979,7 +994,7 @@ def register(event=None):
     if ' ' in regMail or ' ' in regName or ' ' in regPW or ' ' in regPWAgain:
         notice_label["text"] = 'Space is not allowed!!'
         return
-    AllRex = r'(.+)@(.+).(.+)'  # 가입할때 빈칸 없게 조심해야 함
+    AllRex = r'^(.+)@(.+).(.+)$'  # 가입할때 빈칸 없게 조심해야 함
     RAll = re.compile(AllRex)
     if not RAll.search(regMail):
         notice_label["text"] = 'Invalid E-Mail format!!'
@@ -1019,7 +1034,7 @@ def register(event=None):
 
 def logIn(event=None):
     global infoName, Alert_label, logID, infoMail, myName, infoIPAddressExternal
-    # print("log in")
+    print("log in")
 
     logID = ID_entry.get()
     logPW = PW_entry.get()
@@ -1029,15 +1044,15 @@ def logIn(event=None):
         return
     try:
         session.cwd(f'{rootFile}/{logID}')
-        # print(f'dir ok {logID}')
+        print(f'dir ok {logID}')
         download(infoFile)
         download(onlyNameFile)
-        # print(f'down ok {infoFile}')
+        print(f'down ok {infoFile}')
         newCheck = directlyRead(infoFile)
-        # print(f'new ok {newCheck}')
+        print(f'new ok {newCheck}')
         myName = directlyRead(onlyNameFile)
         myName = myName.strip()
-        # print(f'내 이름: {myName}')
+        print(f'내 이름: {myName}')
     except:
         session.cwd(rootFile)
         Alert_label['text'] = 'Wrong E-Mail'
@@ -1052,8 +1067,8 @@ def logIn(event=None):
         infoMail = MAll.group(4)
         infoName = MAll.group(5)
         infoPW = MAll.group(6)
-        # print("user info====" + infoDeviceName, infoIPAddressInternal, infoIPAddressExternal, \
-        # infoMail, infoName, infoPW)
+        print("user info====" + infoDeviceName, infoIPAddressInternal, infoIPAddressExternal, \
+        infoMail, infoName, infoPW)
         if infoMail == logID and infoPW == logPW:
             directlyWrite(infoFile, info() + f' Mail:{logID} Name:{infoName} PW:{logPW}')
             upload(infoFile)
