@@ -54,8 +54,8 @@ newMessageCame = False
 unreadMessages = 0
 nextUnreadMessages = 0
 changeDetect = 0
-beforeLastMessageNum = None
-lastMessageNum = None
+beforeLastMessageNum = 0
+lastMessageNum = 0
 successRead = False
 mainDelayTime = 10000
 delayTime = 100
@@ -69,6 +69,8 @@ accessing = False
 firstDir = ''
 messageSent = False
 sentMessage = ''
+sentFullMessage = ''
+sentCheckI = 0
 
 
 class SimpleEnDecrypt:
@@ -146,28 +148,28 @@ def eraseAll():
 def download(direct, alert=None):
     global downFailTime, firstDir
     try:
-        print(f'다운 받는 곳 {session.pwd()}, {direct}')
+        # print(f'다운 받는 곳 {session.pwd()}, {direct}')
         firstDir = session.pwd()
         with open('local' + direct, 'wb') as f:
             session.retrbinary('RETR ' + direct, f.write)
-            print('down ok')
+            # print('down ok')
     except:
         if alert is False:
             return False
         downFailTime += 1
-        print(downFailTime)
+        # print(downFailTime)
 
-        print('in def download: Download Failed')
+        # print('in def download: Download Failed')
     if downFailTime > 10:
         if alert is False:
             return
         reconnect(firstDir)
         downFailTime = 0
-        print('reconnecting')
+        # print('reconnecting')
 
 
 def read(fileName):
-    global messageNum, newMessageCame, unreadMessages, unread, lastMessageNum, messageSent,sentMessage, \
+    global messageNum, newMessageCame, unreadMessages, unread, lastMessageNum, messageSent,sentMessage, sentCheckI, \
         nextUnreadMessages, chattingRoomStart, writingMessageNum, changeDetect, Name, chatting, beforeLastMessageNum, successRead
     messageNum = 0  # 이거 있어야만 다른 방 들어갈 때 메세지 수 안섞임
     with open('local' + fileName, 'r', encoding='cp949') as f:
@@ -175,9 +177,9 @@ def read(fileName):
         if readMessage:
             successRead = True
         else:
-            print('Noting ro read\n')
+            # print('Noting ro read\n')
             if not chattingRoomStart:
-                print("Read Fail!!\n")
+                # print("Read Fail!!\n")
                 pass
             successRead = False
             return
@@ -253,7 +255,7 @@ def read(fileName):
                             readingText = f'[{Time}] {Name}: {Message[startLength:maxLength]}'
                         else:
                             readingText = f'{blank}{Message[startLength:maxLength]}'
-                        print(f'{Message}  {Message[startLength:maxLength]}')
+                        # print(f'{Message}  {Message[startLength:maxLength]}')
 
                         startLength += plusLength
                         maxLength += plusLength
@@ -263,15 +265,28 @@ def read(fileName):
         chattingRoomStart = False
 
         if messageSent:
-            print(sentMessage, newCheck)
-            if sentMessage != newCheck:
-                print("충돌로 인해 재전송")
-                print(f'내가 보낸 메시지: {sentMessage}')
-                print(f'상대가 보낸 메시지: {newCheck}')
+            sentCheckI += 1
+            if sentCheckI == 3:
+                threading.Thread(target=sentCheck(newCheck)).start()
+                sentCheckI = 0
 
-                Write(chattingFileLocation, Message=sentMessage)
-                sentMessage = ''
-            messageSent = False
+
+def sentCheck(newCheck):
+    global sentFullMessage, messageSent, sentMessage, lastMessageNum
+    print(lastMessageNum, messageNum)
+    if sentFullMessage != newCheck and sentNumber == messageNum:
+        print("충돌로 인해 재전송")
+        print(f'내가 보낸 메시지: {sentFullMessage}')
+        print(f'상대가 보낸 메시지: {newCheck}')
+
+        Write(chattingFileLocation, Message=sentMessage)
+        upload(chattingFileLocation)
+        download(chattingFileLocation)
+        refreshChatting()
+        print("재전송 함")
+        sentFullMessage = ''
+        sentMessage = ''
+    messageSent = False
 
 
 def writeDate():
@@ -293,7 +308,7 @@ def eraseLocal(direct):
 
 
 def Write(fileName, Message=None):
-    global lastMessageNum, messageNum, unread, sentMessage, messageSent
+    global lastMessageNum, messageNum, unread, sentMessage, messageSent, sentFullMessage, sentNumber
     with open('local' + fileName, 'a', encoding='cp949') as f:
         message = ent.get()
         if Message:
@@ -302,7 +317,10 @@ def Write(fileName, Message=None):
             lastMessageNum = messageNum + 1
             ent.delete(0, END)
             sentence = f'[{lastMessageNum}] Date:{writeDate()} Time:{writeTime()} Name: {infoName} Message: {str(message)}'
-            sentMessage = sentence
+            sentFullMessage = sentence
+            sentMessage = str(message)
+            sentNumber = lastMessageNum
+            print(f'보낸 메세지: {sentFullMessage}')
             sentence = simpleED.encrypt(sentence)  # 암호화
             f.write(sentence + '\n')
             messageSent = True
@@ -339,7 +357,7 @@ def sendThread(event=None):
             retry = 0
             return
         if accessing and retry < 50 and ent.get() != '':
-            print(f"retry {retry}")
+            # print(f"retry {retry}")
             retry += 1
             Window.after(10, sendThread)
         else:
@@ -374,7 +392,7 @@ def downAndRead():
     global accessing
     download(chattingFileLocation)
     read(chattingFileLocation)
-    print('chatting')
+    # print('chatting')
     Window.after(delayTime, accessingFalse)
 
 
@@ -383,7 +401,7 @@ def chattingLoop():
     if location == 'Chatting':
         if accessing is False:
             accessing = True
-            print(f'채팅루프 {chattingFileLocation}')
+            # print(f'채팅루프 {chattingFileLocation}')
             threading.Thread(target=downAndRead).start()
         Window.after(delayTime, chattingLoop)
 
