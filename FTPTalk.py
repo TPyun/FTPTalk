@@ -12,8 +12,10 @@ import requests
 import re
 import threading
 import os
+
 # important.py: including ftp address, ID, PW, Port, Encryption Key, Email, Email_Password
 import important
+
 
 """
 ==============important.py===============
@@ -32,7 +34,7 @@ url = important.url
 id = important.id
 pw = important.pw
 port = important.port
-rootFile = '/HDD1/chat'
+rootFile = '/HDD1/services/chat'
 
 session = ftplib.FTP()
 session.connect(url, port=port, timeout=3600)
@@ -40,7 +42,7 @@ session.login(id, pw)
 session.encoding = 'EUC-KR'
 session.cwd(rootFile)
 chattingRoomStart = True
-
+print(session.nlst())
 chatLogFile = 'ChatLog.txt'
 infoFile = 'InfoFile.txt'
 friendsListFile = 'FriendsListFile.txt'
@@ -71,6 +73,7 @@ messageSent = False
 sentMessage = ''
 sentFullMessage = ''
 sentCheckI = 0
+erased = False
 
 
 class SimpleEnDecrypt:
@@ -129,20 +132,29 @@ def info():
 
 
 def eraseAll():
-    global chattingRoomStart, nextUnreadMessages, writingMessageNum, messageNum, newMessageCame, unreadMessages, changeDetect, ChattingRoom_frame
-    eraseLocal(chattingFileLocation)
-    upload(chattingFileLocation)
-    chattingRoomStart = True
-    nextUnreadMessages = 0
-    writingMessageNum = 0
-    messageNum = 0
-    newMessageCame = False
-    unreadMessages = 0
-    changeDetect = 0
-    modifyFriendList(currentChattingFriend, 0)
-    conversation_text.configure(state='normal')
-    conversation_text.delete("0", "end")
-    conversation_text.configure(state='disabled')
+    global chattingRoomStart, nextUnreadMessages, writingMessageNum, messageNum, newMessageCame, unreadMessages, changeDetect, ChattingRoom_frame, accessing, erased
+
+    if not accessing:
+        accessing = True
+
+        eraseLocal(chattingFileLocation)
+        upload(chattingFileLocation)
+        chattingRoomStart = True
+        nextUnreadMessages = 0
+        writingMessageNum = 0
+        messageNum = 0
+        newMessageCame = False
+        unreadMessages = 0
+        changeDetect = 0
+        modifyFriendList(currentChattingFriend, 0)
+        conversation_text.configure(state='normal')
+        conversation_text.delete("0", "end")
+        conversation_text.configure(state='disabled')
+
+        Window.after(delayTime, accessingFalse)
+    else:
+        Window.after(shortDelayTime, eraseAll)
+        print("안지워져서 반복")
 
 
 def download(direct, alert=None):
@@ -351,7 +363,7 @@ def accessingFalse(event=None):
 def sendThread(event=None):
     global accessing, retry
     if location == 'Chatting':
-        if accessing is False:
+        if not accessing:
             accessing = True
             threading.Thread(target=send).start()
             retry = 0
