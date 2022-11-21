@@ -5,7 +5,6 @@ import time
 from tkinter import *
 from tkinter.ttk import *
 import exrex
-from cryptography.fernet import Fernet
 import socket
 from requests import get
 import requests
@@ -16,6 +15,7 @@ import os
 # important.py: including ftp address, ID, PW, Port, Encryption Key, Email, Email_Password
 import important
 
+# pyinstaller -F --icon=1.ico --windowed FTPTalk.py
 
 """
 ==============important.py===============
@@ -76,38 +76,38 @@ sentCheckI = 0
 erased = False
 
 
-class SimpleEnDecrypt:
-    def __init__(self, key=None):
-        if key is None:  # 키가 없다면
-            key = important.encryptKey  # 키43개
-        self.key = key
-        self.f = Fernet(self.key)
-        # print(key)
-
-    def encrypt(self, data, is_out_string=True):
-        try:
-            ou = self.f.encrypt(data.encode('cp949'))  # 인코딩 후 암호화
-            if is_out_string is True:
-                return ou.decode('cp949')  # 출력이 문자열이면 디코딩 후 반환
-            else:
-                return ou
-        except:
-            # print('encrypt fail')
-            pass
-
-    def decrypt(self, data, is_out_string=True):
-        try:
-            ou = self.f.decrypt(data.encode('cp949'))  # 인코딩 후 복호화
-            if is_out_string is True:
-                return ou.decode('cp949')  # 출력이 문자열이면 디코딩 후 반환
-            else:
-                return ou
-        except:
-            # print('decrypt fail')
-            return data
-
-
-simpleED = SimpleEnDecrypt()
+# class SimpleEnDecrypt:
+#     def __init__(self, key=None):
+#         if key is None:  # 키가 없다면
+#             key = important.encryptKey  # 키43개
+#         self.key = key
+#         self.f = Fernet(self.key)
+#         # print(key)
+#
+#     def encrypt(self, data, is_out_string=True):
+#         try:
+#             ou = self.f.encrypt(data.encode('cp949'))  # 인코딩 후 암호화
+#             if is_out_string is True:
+#                 return ou.decode('cp949')  # 출력이 문자열이면 디코딩 후 반환
+#             else:
+#                 return ou
+#         except:
+#             # print('encrypt fail')
+#             pass
+#
+#     def decrypt(self, data, is_out_string=True):
+#         try:
+#             ou = self.f.decrypt(data.encode('cp949'))  # 인코딩 후 복호화
+#             if is_out_string is True:
+#                 return ou.decode('cp949')  # 출력이 문자열이면 디코딩 후 반환
+#             else:
+#                 return ou
+#         except:
+#             # print('decrypt fail')
+#             return data
+#
+#
+# simpleED = SimpleEnDecrypt()
 
 
 def reconnect(directory):
@@ -196,7 +196,7 @@ def read(fileName):
             successRead = False
             return
         for newCheck in readMessage:
-            newCheck = simpleED.decrypt(newCheck)
+            # newCheck = simpleED.decrypt(newCheck)
             maxLength = 20
             plusLength = 20
             startLength = 0
@@ -242,7 +242,7 @@ def read(fileName):
             newMessageCame = False
         if newMessageCame is True and readMessage and not chattingRoomStart:
             for newCheck in readMessage:
-                newCheck = simpleED.decrypt(newCheck)
+                #newCheck = simpleED.decrypt(newCheck)
                 maxLength = 20
                 plusLength = 20
                 startLength = 0
@@ -279,7 +279,7 @@ def read(fileName):
         if messageSent:
             sentCheckI += 1
             if sentCheckI == 3:
-                threading.Thread(target=sentCheck(newCheck)).start()
+                threading.Thread(target=sentCheck(newCheck.strip())).start()
                 sentCheckI = 0
 
 
@@ -287,9 +287,11 @@ def sentCheck(newCheck):
     global sentFullMessage, messageSent, sentMessage, lastMessageNum
     print(lastMessageNum, messageNum)
     if sentFullMessage != newCheck and sentNumber == messageNum:
+        if sentFullMessage is newCheck:
+            print("구라임")
         print("충돌로 인해 재전송")
-        print(f'내가 보낸 메시지: {sentFullMessage}')
-        print(f'상대가 보낸 메시지: {newCheck}')
+        print(f'{newCheck}')
+        print(f'{sentFullMessage}')
 
         Write(chattingFileLocation, Message=sentMessage)
         upload(chattingFileLocation)
@@ -333,7 +335,7 @@ def Write(fileName, Message=None):
             sentMessage = str(message)
             sentNumber = lastMessageNum
             print(f'보낸 메세지: {sentFullMessage}')
-            sentence = simpleED.encrypt(sentence)  # 암호화
+            #sentence = simpleED.encrypt(sentence)  # 암호화
             f.write(sentence + '\n')
             messageSent = True
 
@@ -435,9 +437,6 @@ Window.resizable(False, False)
 font = tkinter.font.Font(family="맑은 고딕", size=10)
 noticeFont = tkinter.font.Font(family="Arial", size=15, weight='bold')
 
-Window.iconbitmap("2.ico")
-# Window.iconphoto("2.ico")
-
 
 LogIn_frame = Frame(Window)
 ChattingRoom_frame = Frame(Window)
@@ -534,7 +533,7 @@ def goLogin(event=None):
     remember_button.state(['!alternate'])
     try:
         rememberedID = directlyRead('rememberedID.txt')
-        rememberedID = simpleED.decrypt(rememberedID)
+        #rememberedID = simpleED.decrypt(rememberedID)
         ID_entry.insert(0, rememberedID)
         remember_button.state(['selected'])
     except:
@@ -713,7 +712,7 @@ def findFriend(event=None):
         if readMessage:
             for friends in readMessage:
                 friends = friends.strip()
-                friends = simpleED.decrypt(friends)
+                #friends = simpleED.decrypt(friends)
                 print(f'friend: {friends}, friendInfo: {friendInfo}')
                 if friendInfo in friends:
                     FriendFind_label['text'] = 'Already exist'
@@ -784,7 +783,7 @@ def modifyFriendsFriendList(friendMail, currentNum, deleteAll=False):
             if friendsList:
                 print("friendlist 있음")
                 for friendInfo in friendsList:
-                    friendInfo = simpleED.decrypt(friendInfo)
+                    #friendInfo = simpleED.decrypt(friendInfo)
                     if logID in friendInfo:
                         AllRex = r'(.*) (.*) \[(.*)\]$'
                         RAll = re.compile(AllRex)
@@ -795,10 +794,13 @@ def modifyFriendsFriendList(friendMail, currentNum, deleteAll=False):
                         if not currentNum:
                             currentNum = 0
                         if deleteAll is False:
-                            info = simpleED.encrypt(f'{name} {mail} [{currentNum}]')
+                            #info = simpleED.encrypt(f'{name} {mail} [{currentNum}]')
+                            info = f'{name} {mail} [{currentNum}]'
+
                             allSentence += info + '\n'
                     else:
-                        info = simpleED.encrypt(f'{friendInfo}')
+                        #info = simpleED.encrypt(f'{friendInfo}')
+                        info = f'{friendInfo}'
                         allSentence += info + '\n'
                 with open('local' + friendsListFile, 'w', encoding='cp949') as wf:
                     wf.write(allSentence)
@@ -818,7 +820,7 @@ def modifyFriendList(friendMail, currentNum, deleteAll=False):
             if friendsList:
                 print("friendlist 있음")
                 for friendInfo in friendsList:
-                    friendInfo = simpleED.decrypt(friendInfo)
+                    #friendInfo = simpleED.decrypt(friendInfo)
                     if f'{friendMail} ' in friendInfo:  # friendName 오른쪽에 빈칸 있어야 함
                         print(f'this {friendMail} friendinfo: {friendInfo}')
                         AllRex = r'(.*) (.*) \[(.*)\]$'
@@ -830,10 +832,13 @@ def modifyFriendList(friendMail, currentNum, deleteAll=False):
                         if not currentNum:
                             currentNum = 0
                         if deleteAll is False:
-                            info = simpleED.encrypt(f'{name} {mail} [{currentNum}]')
+                            #info = simpleED.encrypt(f'{name} {mail} [{currentNum}]')
+                            info = f'{name} {mail} [{currentNum}]'
                             allSentence += info + '\n'
                     else:
-                        info = simpleED.encrypt(f'{friendInfo}')
+                        #info = simpleED.encrypt(f'{friendInfo}')
+                        info = f'{friendInfo}'
+
                         allSentence += info + '\n'
                     with open('local' + friendsListFile, 'w', encoding='cp949') as wf:
                         wf.write(allSentence)
@@ -851,7 +856,7 @@ def numOfMessageCame(event=None):
         if friendsList:
             i = 0
             for friendNameMail in friendsList:
-                friendNameMail = simpleED.decrypt(friendNameMail)
+                #friendNameMail = simpleED.decrypt(friendNameMail)
                 print('친구이름메일' + friendNameMail)
                 AllRex = r'(.*) (.*) \[(.*)\]'
                 RAll = re.compile(AllRex)
@@ -892,7 +897,7 @@ def messageLengthCheck(directory, fileName):
         if not readMessage:
             return 0
         for newCheck in readMessage:
-            newCheck = simpleED.decrypt(newCheck)
+            # newCheck = simpleED.decrypt(newCheck)
             AllRex = r'\[(.*)\] Date:(.*) Time:(.*) Name: (.*) Message: (.*)'
             try:
                 RAll = re.compile(AllRex)
@@ -912,7 +917,7 @@ def directlyRead(fileName):
         if readMessage:
             for newCheck in readMessage:
                 print(newCheck)
-                newCheck = simpleED.decrypt(newCheck)
+                #newCheck = simpleED.decrypt(newCheck)
                 f.close()
                 return newCheck
         else:
@@ -923,14 +928,14 @@ def directlyRead(fileName):
 def directlyWrite(fileName, sentence):
     with open('local' + fileName, 'w', encoding='cp949') as f:
         if sentence:
-            sentence = simpleED.encrypt(sentence)
+            #sentence = simpleED.encrypt(sentence)
             f.write(sentence)
 
 
 def directlyModifyFile(fileName, sentence):
     with open('local' + fileName, 'a', encoding='cp949') as f:
         if sentence:
-            sentence = simpleED.encrypt(sentence)
+            #sentence = simpleED.encrypt(sentence)
             f.write(sentence + '\n')
 
 
@@ -1104,8 +1109,8 @@ def logIn(event=None):
             upload(infoFile)
             # 아이디 저장하고 로그인할 때
             if 'selected' in remember_button.state():
-                encryptedID = simpleED.encrypt(logID)
-                directlyWrite('rememberedID.txt', f'{encryptedID}')
+                #encryptedID = simpleED.encrypt(logID)
+                directlyWrite('rememberedID.txt', f'{logID}')
             else:
                 directlyWrite('rememberedID.txt', '')
             goMain()
