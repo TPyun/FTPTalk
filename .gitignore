@@ -1,0 +1,9 @@
+* text=auto
+.idea/
+__pycache__/
+build/
+localChatFiles/
+dist/
+1.ico
+important.py
+*.spec
