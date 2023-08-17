@@ -123,11 +123,22 @@ def reconnect(directory):
 
 
 def info():
-    url = 'http://ip-api.com/json'
-    data = requests.get(url)
-    res = data.json()
-    country = res["countryCode"]
-    externalIp = get("https://api.ipify.org").text
+    from bs4 import BeautifulSoup
+    html = '<textarea id="ip" data-ip="96.245.80.112" cols="81" rows="1" autofocus="" readonly="" onclick="this.setSelectionRange(0, 9999);">218.101.137.172</textarea>'
+    soup = BeautifulSoup(html, 'html.parser')
+    textarea = soup.find('textarea')
+    if textarea:
+        externalIp = textarea.text
+        print(externalIp)
+    else:
+        print("No textarea element found.")
+
+
+    # url = 'http://ip-api.com/json'
+    # data = requests.get(url)
+    # res = data.json()
+    # country = res["countryCode"]
+    # externalIp = get("https://api.ipify.org").text
     return f'Device:{socket.gethostname()} Internal:{socket.gethostbyname(socket.gethostname())} External:{externalIp}'
 
 
@@ -856,6 +867,8 @@ def numOfMessageCame(event=None):
         if friendsList:
             i = 0
             for friendNameMail in friendsList:
+                if friendNameMail is '\n':
+                    continue
                 #friendNameMail = simpleED.decrypt(friendNameMail)
                 print('친구이름메일' + friendNameMail)
                 AllRex = r'(.*) (.*) \[(.*)\]'
@@ -1102,9 +1115,9 @@ def logIn(event=None):
         infoMail = MAll.group(4)
         infoName = MAll.group(5)
         infoPW = MAll.group(6)
-        print("user info====" + infoDeviceName, infoIPAddressInternal, infoIPAddressExternal, \
-        infoMail, infoName, infoPW)
+        print("user info====" + infoDeviceName, infoIPAddressInternal, infoIPAddressExternal, infoMail, infoName, infoPW)
         if infoMail == logID and infoPW == logPW:
+            print(infoFile, info() + f' Mail:{logID} Name:{infoName} PW:{logPW}')
             directlyWrite(infoFile, info() + f' Mail:{logID} Name:{infoName} PW:{logPW}')
             upload(infoFile)
             # 아이디 저장하고 로그인할 때
